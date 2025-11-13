@@ -6,8 +6,27 @@
   <title>ValiTec MJ — Cadastro de Produto</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <canvas id="particleCanvas"></canvas>
 
-  
+  <div class="app-container">
+    <button id="btnMenu" class="hamburger">☰</button>
+    <aside class="sidebar" id="sidebarMenu">
+      <h1></h1>
+      <nav>
+        <a href="dashboard.html">Painel</a>
+        <a href="#" class="active">Cadastrar Produto</a>
+        <a href="Lista-produtos.html">Lista de Produtos</a>
+        <a href="Lista-rebaixados.html">Produtos Rebaixados</a>
+        <a href="calendario.html">Calendário</a>
+        <a href="perfil.html">Perfil</a>
+        <a href="cadastro-usuarios.html">Cadastrar Usuários</a>
+        <a href="relatorios.html">Relatórios</a>
+        <a href="#" onclick="localStorage.clear(); location.href='index.html'">Sair</a>
+      </nav>
+    </aside>
+
 <style>
 .hamburger {
   display: none;
@@ -42,30 +61,9 @@
   }
 }
 </style>
-</head>
-<body>
-  <canvas id="particleCanvas"></canvas>
-
-  <div class="app-container">
-    <button id="btnMenu" class="hamburger">☰</button>
-    <aside class="sidebar" id="sidebarMenu">
-      <h1></h1>
-      <nav>
-        <a href="dashboard.html">Painel</a>
-        <a href="#" class="active">Cadastrar Produto</a>
-        <a href="Lista-produtos.html">Lista de Produtos</a>
-        <a href="Lista-rebaixados.html">Produtos Rebaixados</a>
-        <a href="calendario.html">Calendário</a>
-        <a href="perfil.html">Perfil</a>
-        <a href="cadastro-usuarios.html">Cadastrar Usuários</a>
-        <a href="relatorios.html">Relatórios</a>
-        <a href="#" onclick="localStorage.clear(); location.href='index.html'">Sair</a>
-      </nav>
-    </aside>
-
 
     <main class="main">
-      <h2 id="tituloPagina" style="text-align:center;">Cadastrar </h2>
+      <h2 id="tituloPagina" style="text-align:center;">Cadastrar Produto</h2>
 
       <form id="formProduto" class="form-produto">
 
@@ -127,18 +125,18 @@ const previewFoto = document.getElementById("previewFoto");
 const inputFoto = document.getElementById("foto");
 const btnOpenCamera = document.getElementById("btnOpenCamera");
 const btnCapturar = document.getElementById("btnCapturar");
+const scannerPreview = document.getElementById("scannerPreview");
 
 // ABRIR CÂMERA
 btnOpenCamera.onclick = async () => {
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment" }, // CORREÇÃO PRINCIPAL
+      video: { facingMode: "environment" },
       audio: false
     });
 
     cameraPreview.srcObject = stream;
-
-    await cameraPreview.play(); // GARANTE videoWidth/videoHeight
+    await cameraPreview.play();
 
     cameraPreview.style.display = "block";
     previewFoto.style.display = "none";
@@ -167,17 +165,14 @@ btnCapturar.onclick = async () => {
   previewFoto.src = dataURL;
   previewFoto.style.display = "block";
 
-  // Converter foto para Blob (upload)
   const blob = await fetch(dataURL).then(r => r.blob());
-  window.fotoBlob = blob; // SALVA A FOTO CAPTURADA
+  window.fotoBlob = blob;
 
-  // Fechar câmera após captura
   if (stream) stream.getTracks().forEach(t => t.stop());
   cameraPreview.style.display = "none";
   btnCapturar.style.display = "none";
 };
 </script>
-
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
