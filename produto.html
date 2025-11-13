@@ -233,11 +233,14 @@ onAuthStateChanged(auth, async user => {
   document.getElementById("foto").required = false;
 });
 
-// SALVAR
-formProduto.onsubmit = async (e) => {
-  e.preventDefault();
+document.getElementById("btnSalvar").onclick = async () => {
 
   const user = auth.currentUser;
+  if (!user) {
+    alert("Você precisa estar logado.");
+    return;
+  }
+
   const snapUser = await getDoc(doc(db, "usuarios", user.email));
   const loja = snapUser.data().loja;
 
@@ -248,25 +251,30 @@ formProduto.onsubmit = async (e) => {
   const setorProduto = setor.value;
   const validadeProduto = validade.value;
 
+  if (!nomeProduto || !codigoProduto || !loteProduto || !validadeProduto) {
+    alert("Preencha todos os campos obrigatórios.");
+    return;
+  }
+
   const [yyyy, mm, dd] = validadeProduto.split("-");
   const validadeBR = `${dd}/${mm}/${yyyy}`;
 
   const id = produtoId || crypto.randomUUID();
   let fotoURLFinal = "";
 
-  // prioridade 1: foto capturada pela câmera (window.fotoBlob)
+  // 1 — foto capturada (câmera)
   if (window.fotoBlob) {
     const fotoRef = ref(storage, `produtos/${loja}/${id}.jpg`);
     await uploadBytes(fotoRef, window.fotoBlob);
     fotoURLFinal = await getDownloadURL(fotoRef);
   }
-  // prioridade 2: arquivo selecionado via input[type=file]
+  // 2 — foto enviada via arquivo
   else if (inputFile.files.length > 0) {
     const fotoRef = ref(storage, `produtos/${loja}/${id}.jpg`);
     await uploadBytes(fotoRef, inputFile.files[0]);
     fotoURLFinal = await getDownloadURL(fotoRef);
   }
-  // prioridade 3: ao editar, mantem a foto atual se não enviar nova
+  // 3 — manter foto existente ao editar
   else if (produtoId) {
     const snapProd = await getDoc(doc(db, `lojas/${loja}/produtos/${produtoId}`));
     fotoURLFinal = snapProd.data().fotoURL || "";
