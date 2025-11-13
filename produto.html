@@ -15,12 +15,10 @@
       <h1></h1>
       <nav>
         <a href="dashboard.html">Painel</a>
-        <a href="#" class="active">
-            cadastrar pro
-        </a>
-        <a href="Lista-produtos.html">lista de produto</a>
-        <a href="Lista-rebaixados.html">Produtos rebaixado</a>
-        <a href="calendario.html">Calendario</a>
+        <a href="#" class="active">Cadastrar Produto</a>
+        <a href="Lista-produtos.html">Lista de Produtos</a>
+        <a href="Lista-rebaixados.html">Produtos Rebaixados</a>
+        <a href="calendario.html">Calendário</a>
         <a href="perfil.html">Perfil</a>
         <a href="cadastro-usuarios.html">Cadastrar Usuários</a>
         <a href="relatorios.html">Relatórios</a>
@@ -37,15 +35,19 @@
         <input type="text" id="nome" required>
 
         <label>Código de Barras</label>
-<div style="display:flex; gap:8px;">
-  <input type="text" id="codigo" placeholder="Aguardando leitura..." required style="flex:1;">
-  <button type="button" id="btnScan" style="padding:6px 12px;border-radius:6px;background:var(--accent);border:none;cursor:pointer;">📷 Ler</button>
-</div>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="codigo" placeholder="Aguardando leitura..." required style="flex:1;">
+          <button type="button" id="btnScan" style="padding:6px 12px;border-radius:6px;background:var(--accent);border:none;cursor:pointer;">📷 Ler</button>
+        </div>
 
-<video id="scannerPreview" style="display:none;width:260px;border-radius:8px;margin-top:8px;border:1px solid rgba(255,255,255,0.4);"></video>
+        <video id="scannerPreview" style="display:none;width:260px;border-radius:8px;margin-top:8px;border:1px solid rgba(255,255,255,0.4);"></video>
 
         <label>Lote</label>
         <input type="text" id="lote" required>
+
+        <!-- CAMPO PREÇO ADICIONADO -->
+        <label>Preço</label>
+        <input type="number" id="preco" step="0.01" placeholder="0,00" required>
 
         <label>Setor</label>
         <select id="setor" required>
@@ -77,7 +79,6 @@
     </main>
   </div>
 
-  <!-- Biblioteca do leitor de código de barras -->
 <script src="https://unpkg.com/@zxing/browser@0.1.1"></script>
 
 <script>
@@ -90,19 +91,15 @@ const btnCapturar = document.getElementById('btnCapturar');
 
 btnOpenCamera.onclick = async () => {
   try {
-    // Lista todos os dispositivos de vídeo
     const devices = await navigator.mediaDevices.enumerateDevices();
     const cameras = devices.filter(d => d.kind === "videoinput");
 
     if (cameras.length === 0) {
-      alert("Nenhuma câmera encontrada no dispositivo.");
+      alert("Nenhuma câmera encontrada.");
       return;
     }
 
-    // Tenta identificar câmera traseira
-    let cameraId = cameras.find(c => c.label.toLowerCase().includes("back") || c.label.toLowerCase().includes("traseira"))?.deviceId;
-
-    // Se não achar traseira → pega a última (geralmente é a traseira mesmo)
+    let cameraId = cameras.find(c => c.label.toLowerCase().includes("back"))?.deviceId;
     if (!cameraId) cameraId = cameras[cameras.length - 1].deviceId;
 
     stream = await navigator.mediaDevices.getUserMedia({
@@ -116,7 +113,7 @@ btnOpenCamera.onclick = async () => {
     btnCapturar.style.display = 'inline-block';
 
   } catch (e) {
-    alert("Não foi possível acessar a câmera. Dê permissão ao aplicativo nas configurações.");
+    alert("Não foi possível acessar a câmera.");
     console.log(e);
   }
 };
@@ -131,7 +128,6 @@ btnCapturar.onclick = () => {
   previewFoto.src = dataURL;
   previewFoto.style.display = 'block';
 
-  // GUARDA A FOTO EM UMA VARIÁVEL GLOBAL
   window.fotoBlob = null;
 
   fetch(dataURL).then(r => r.blob()).then(blob => {
@@ -142,7 +138,6 @@ btnCapturar.onclick = () => {
   cameraPreview.style.display = "none";
   btnCapturar.style.display = "none";
 };
-
 </script>
 
 <script type="module">
@@ -168,7 +163,6 @@ const auth = getAuth(app);
 const params = new URLSearchParams(location.search);
 const produtoId = params.get("id");
 
-// --- MODO EDIÇÃO ---
 onAuthStateChanged(auth, async user => {
   if (!user || !produtoId) return;
 
@@ -184,14 +178,16 @@ onAuthStateChanged(auth, async user => {
   nome.value = p.nome;
   codigo.value = p.codigo;
   lote.value = p.lote;
+  preco.value = p.preco ?? "";
   setor.value = p.setor;
   validade.value = p.dataValidadeISO;
+
   previewFoto.src = p.fotoURL;
   previewFoto.style.display = "block";
   document.getElementById("foto").required = false;
 });
 
-// --- SALVAR ---
+// SALVAR
 document.getElementById("formProduto").onsubmit = async (e) => {
   e.preventDefault();
 
@@ -202,48 +198,37 @@ document.getElementById("formProduto").onsubmit = async (e) => {
   const nomeProduto = nome.value.trim();
   const codigoProduto = codigo.value.trim();
   const loteProduto = lote.value.trim();
+  const precoProduto = parseFloat(preco.value);
   const setorProduto = setor.value;
   const validadeProduto = validade.value;
 
   const [yyyy, mm, dd] = validadeProduto.split("-");
   const validadeBR = `${dd}/${mm}/${yyyy}`;
 
-  // ----------------------------
-  //  CRIA ID PARA NOVO PRODUTO
-  // ----------------------------
   const id = produtoId || crypto.randomUUID();
 
-  // ----------------------------
-  //  UPLOAD DA FOTO (SE EXISTIR)
-  // ----------------------------
   let fotoURLFinal = "";
 
-  // Se a foto veio da câmera
-if (window.fotoBlob) {
+  if (window.fotoBlob) {
     const fotoRef = ref(storage, `produtos/${loja}/${id}.jpg`);
     await uploadBytes(fotoRef, window.fotoBlob);
     fotoURLFinal = await getDownloadURL(fotoRef);
-}
-// Se o usuário escolheu um arquivo manualmente
-else if (inputFoto.files.length > 0) {
+  }
+  else if (inputFoto.files.length > 0) {
     const fotoRef = ref(storage, `produtos/${loja}/${id}.jpg`);
     await uploadBytes(fotoRef, inputFoto.files[0]);
     fotoURLFinal = await getDownloadURL(fotoRef);
-}
-// Se estiver editando e não trocar a foto
-else if (produtoId) {
+  }
+  else if (produtoId) {
     const snapProd = await getDoc(doc(db, `lojas/${loja}/produtos/${produtoId}`));
     fotoURLFinal = snapProd.data().fotoURL;
-}
+  }
 
-
-  // ----------------------------
-  //  SALVAR NO FIRESTORE
-  // ----------------------------
   await setDoc(doc(db, `lojas/${loja}/produtos/${id}`), {
     nome: nomeProduto,
     codigo: codigoProduto,
     lote: loteProduto,
+    preco: precoProduto,
     setor: setorProduto,
     dataValidadeISO: validadeProduto,
     dataValidadeBR: validadeBR,
@@ -252,26 +237,16 @@ else if (produtoId) {
     criadoEm: new Date()
   }, { merge: true });
 
-  // REDIRECIONAR (CORRIGIDO)
   location.href = "Lista-produtos.html";
 };
-// ✅ ESTE AQUI É O BOTÃO LIMPAR
+
 document.getElementById("btnLimpar").onclick = () => {
   formProduto.reset();
   previewFoto.style.display = "none";
   scannerPreview.style.display = "none";
 };
 </script>
-<script>
-const sidebar = document.querySelector('.sidebar');
-const hamburger = document.createElement('button');
-hamburger.className = 'hamburger';
-hamburger.textContent = '☰';
-hamburger.onclick = () => {
-  sidebar.classList.toggle('open');
-};
-document.body.appendChild(hamburger);
-</script>
+
 <button id="toggleTheme" class="theme-toggle">🌙</button>
 <script>
 const toggle = document.getElementById("toggleTheme");
