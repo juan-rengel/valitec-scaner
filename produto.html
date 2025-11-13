@@ -82,12 +82,14 @@
 <script src="https://unpkg.com/@zxing/browser@0.1.1"></script>
 
 <script>
+// camera capture script (non-module) — keeps UI immediate
 let stream;
 const cameraPreview = document.getElementById('cameraPreview');
 const previewFoto = document.getElementById('previewFoto');
 const inputFoto = document.getElementById('foto');
 const btnOpenCamera = document.getElementById('btnOpenCamera');
 const btnCapturar = document.getElementById('btnCapturar');
+const scannerPreview = document.getElementById('scannerPreview');
 
 btnOpenCamera.onclick = async () => {
   try {
@@ -120,16 +122,16 @@ btnOpenCamera.onclick = async () => {
 
 btnCapturar.onclick = () => {
   const canvas = document.createElement('canvas');
-  canvas.width = cameraPreview.videoWidth;
-  canvas.height = cameraPreview.videoHeight;
-  canvas.getContext('2d').drawImage(cameraPreview, 0, 0);
+  canvas.width = cameraPreview.videoWidth || 640;
+  canvas.height = cameraPreview.videoHeight || 480;
+  canvas.getContext('2d').drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
 
   const dataURL = canvas.toDataURL("image/jpeg");
   previewFoto.src = dataURL;
   previewFoto.style.display = 'block';
 
+  // guarda Blob temporário para upload
   window.fotoBlob = null;
-
   fetch(dataURL).then(r => r.blob()).then(blob => {
     window.fotoBlob = blob;
   });
@@ -160,6 +162,18 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const auth = getAuth(app);
 
+// DOM references inside module (important: module scope doesn't create implicit globals from IDs)
+const nome = document.getElementById('nome');
+const codigo = document.getElementById('codigo');
+const lote = document.getElementById('lote');
+const preco = document.getElementById('preco');
+const setor = document.getElementById('setor');
+const validade = document.getElementById('validade');
+const inputFile = document.getElementById('foto');
+const preview = document.getElementById('previewFoto');
+const formProduto = document.getElementById('formProduto');
+const scanner = document.getElementById('scannerPreview');
+
 const params = new URLSearchParams(location.search);
 const produtoId = params.get("id");
 
@@ -182,13 +196,13 @@ onAuthStateChanged(auth, async user => {
   setor.value = p.setor;
   validade.value = p.dataValidadeISO;
 
-  previewFoto.src = p.fotoURL;
-  previewFoto.style.display = "block";
+  preview.src = p.fotoURL;
+  preview.style.display = "block";
   document.getElementById("foto").required = false;
 });
 
 // SALVAR
-document.getElementById("formProduto").onsubmit = async (e) => {
+formProduto.onsubmit = async (e) => {
   e.preventDefault();
 
   const user = auth.currentUser;
@@ -198,7 +212,7 @@ document.getElementById("formProduto").onsubmit = async (e) => {
   const nomeProduto = nome.value.trim();
   const codigoProduto = codigo.value.trim();
   const loteProduto = lote.value.trim();
-  const precoProduto = parseFloat(preco.value);
+  const precoProduto = parseFloat(preco.value) || 0;
   const setorProduto = setor.value;
   const validadeProduto = validade.value;
 
@@ -206,22 +220,24 @@ document.getElementById("formProduto").onsubmit = async (e) => {
   const validadeBR = `${dd}/${mm}/${yyyy}`;
 
   const id = produtoId || crypto.randomUUID();
-
   let fotoURLFinal = "";
 
+  // prioridade 1: foto capturada pela câmera (window.fotoBlob)
   if (window.fotoBlob) {
     const fotoRef = ref(storage, `produtos/${loja}/${id}.jpg`);
     await uploadBytes(fotoRef, window.fotoBlob);
     fotoURLFinal = await getDownloadURL(fotoRef);
   }
-  else if (inputFoto.files.length > 0) {
+  // prioridade 2: arquivo selecionado via input[type=file]
+  else if (inputFile.files.length > 0) {
     const fotoRef = ref(storage, `produtos/${loja}/${id}.jpg`);
-    await uploadBytes(fotoRef, inputFoto.files[0]);
+    await uploadBytes(fotoRef, inputFile.files[0]);
     fotoURLFinal = await getDownloadURL(fotoRef);
   }
+  // prioridade 3: ao editar, mantem a foto atual se não enviar nova
   else if (produtoId) {
     const snapProd = await getDoc(doc(db, `lojas/${loja}/produtos/${produtoId}`));
-    fotoURLFinal = snapProd.data().fotoURL;
+    fotoURLFinal = snapProd.data().fotoURL || "";
   }
 
   await setDoc(doc(db, `lojas/${loja}/produtos/${id}`), {
@@ -240,10 +256,14 @@ document.getElementById("formProduto").onsubmit = async (e) => {
   location.href = "Lista-produtos.html";
 };
 
-document.getElementById("btnLimpar").onclick = () => {
+// LIMPAR
+const btnLimpar = document.getElementById('btnLimpar');
+btnLimpar.onclick = () => {
   formProduto.reset();
-  previewFoto.style.display = "none";
-  scannerPreview.style.display = "none";
+  preview.style.display = "none";
+  scanner.style.display = "none";
+  // limpar fotoBlob se existir
+  window.fotoBlob = null;
 };
 </script>
 
