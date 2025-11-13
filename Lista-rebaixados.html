@@ -27,12 +27,12 @@
     </aside>
 
     <main class="main fade-in">
-  <h2 class="page-title">Produtos Rebaixados</h2>
+      <h2 class="page-title">Produtos Rebaixados</h2>
 
-  <input type="text" id="buscaRebaixado" class="input-busca" placeholder="🔍 Buscar produto...">
+      <input type="text" id="buscaRebaixado" class="input-busca" placeholder="🔍 Buscar produto...">
 
-  <div id="listaRebaixados" class="lista-produtos"></div>
-</main>
+      <div id="listaRebaixados" class="lista-produtos"></div>
+    </main>
   </div>
 
 <script type="module">
@@ -81,53 +81,54 @@ function exibirLista(lista) {
     card.style.border = "1px solid #4eff9a";
 
     card.innerHTML = `
-      <img src="${p.fotoURL}" style="width:70px;border-radius:6px;">
+      <img src="${p.fotoURL}" style="width:70px;border-radius:6px;" onerror="this.style.display='none'">
       <div style="flex:1;">
         <strong>${p.nome}</strong><br>
         ${p.setor}<br>
+        💲 <b>Preço:</b> R$ ${(p.preco ?? 0).toFixed(2).replace('.', ',')}<br>
         Validade: ${p.dataValidadeBR}<br>
         <span style="color:#4eff9a;font-weight:bold;">✅ REBAIXADO</span>
       </div>
     `;
 
-    // ✅ CRIANDO O BOTÃO REVERTER (correção do erro)
+    // BOTÃO REVERTER
     const btnReverter = document.createElement("button");
     btnReverter.textContent = "↩️ Reverter";
     btnReverter.className = "btnEdit";
     btnReverter.style.background = "#4eff9a";
-    btnReverter.style.color = "#fff";
+    btnReverter.style.color = "#000";
     btnReverter.style.fontWeight = "600";
     btnReverter.style.borderRadius = "6px";
-    btnReverter.style.cursor = "pointer";
 
- btnReverter.onclick = async () => {
-  await updateDoc(doc(db, `lojas/${p.loja}/produtos/${p.id}`), { status: "normal" });
+    btnReverter.onclick = async () => {
+      await updateDoc(doc(db, `lojas/${p.loja}/produtos/${p.id}`), { status: "normal" });
 
-  // Buscar número salvo corretamente
-  const confSnap = await getDoc(doc(db, `lojas/${p.loja}/config/geral`));
-  const whatsGerente = confSnap.exists() ? confSnap.data().whatsGerente : null;
+      const confSnap = await getDoc(doc(db, `lojas/${p.loja}/config/geral`));
+      const whatsGerente = confSnap.exists() ? confSnap.data().whatsGerente : null;
 
-  if (whatsGerente) {
-    const msg = `
+      if (whatsGerente) {
+        const msg = `
 ↩️ *REVERÇÃO DE REBAIXA*
 
 📦 *${p.nome}*
 🏷️ Setor: ${p.setor}
 🔖 Lote: ${p.lote}
+💲 Preço: R$ ${(p.preco ?? 0).toFixed(2).replace('.', ',')}
 📅 Validade: ${p.dataValidadeBR}
-    `;
-    window.open(`https://wa.me/55${whatsGerente}?text=${encodeURIComponent(msg)}`);
-  }
+        `;
+        window.open(`https://wa.me/55${whatsGerente}?text=${encodeURIComponent(msg)}`);
+      }
 
-  carregarRebaixados();
-};
+      carregarRebaixados();
+    };
 
-    // 🗑️ Excluir
+    // BOTÃO EXCLUIR
     const btnExcluir = document.createElement("button");
     btnExcluir.textContent = "🗑️ Excluir";
     btnExcluir.className = "btnDelete";
     btnExcluir.style.background = "#ff5c5c";
     btnExcluir.style.color = "#000";
+
     btnExcluir.onclick = async () => {
       if (confirm(`Excluir definitivamente ${p.nome}?`)) {
         await deleteDoc(doc(db, `lojas/${p.loja}/produtos/${p.id}`));
@@ -141,18 +142,18 @@ function exibirLista(lista) {
   });
 }
 
-// 🔍 FILTRO
+// FILTRO
 document.getElementById("buscaRebaixado").addEventListener("input", e => {
   const termo = e.target.value.toLowerCase();
   exibirLista(itens.filter(p =>
     p.nome.toLowerCase().includes(termo) ||
-    p.setor.toLowerCase().includes(termo)
+    p.setor.toLowerCase().includes(termo) ||
+    (p.preco + "").includes(termo)
   ));
 });
 
 auth.onAuthStateChanged(carregarRebaixados);
 </script>
-
 
 <script>
 const sidebar = document.querySelector('.sidebar');
@@ -162,6 +163,7 @@ hamburger.textContent = '☰';
 hamburger.onclick = () => sidebar.classList.toggle('open');
 document.body.appendChild(hamburger);
 </script>
+
 <button id="toggleTheme" class="theme-toggle">🌙</button>
 <script>
 const toggle = document.getElementById("toggleTheme");
