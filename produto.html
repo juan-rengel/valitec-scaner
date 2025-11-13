@@ -206,8 +206,29 @@ document.getElementById("formProduto").onsubmit = async (e) => {
   const [yyyy, mm, dd] = validadeProduto.split("-");
   const validadeBR = `${dd}/${mm}/${yyyy}`;
 
-  // ... RESTANTE DO SEU CÓDIGO ...
+  // ----------------------------
+  //  CRIA ID PARA NOVO PRODUTO
+  // ----------------------------
+  const id = produtoId || crypto.randomUUID();
 
+  // ----------------------------
+  //  UPLOAD DA FOTO (SE EXISTIR)
+  // ----------------------------
+  let fotoURLFinal = "";
+
+  if (inputFoto.files.length > 0) {
+    const fotoRef = ref(storage, `produtos/${loja}/${id}.jpg`);
+    await uploadBytes(fotoRef, inputFoto.files[0]);
+    fotoURLFinal = await getDownloadURL(fotoRef);
+  } else if (produtoId) {
+    // Se estiver editando e não enviar foto nova, mantém foto antiga
+    const snapProd = await getDoc(doc(db, `lojas/${loja}/produtos/${produtoId}`));
+    fotoURLFinal = snapProd.data().fotoURL;
+  }
+
+  // ----------------------------
+  //  SALVAR NO FIRESTORE
+  // ----------------------------
   await setDoc(doc(db, `lojas/${loja}/produtos/${id}`), {
     nome: nomeProduto,
     codigo: codigoProduto,
@@ -220,7 +241,8 @@ document.getElementById("formProduto").onsubmit = async (e) => {
     criadoEm: new Date()
   }, { merge: true });
 
-  location.href = "lista-produtos.html";
+  // REDIRECIONAR (CORRIGIDO)
+  location.href = "Lista-produtos.html";
 };
 // ✅ ESTE AQUI É O BOTÃO LIMPAR
 document.getElementById("btnLimpar").onclick = () => {
