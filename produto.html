@@ -190,7 +190,7 @@ onAuthStateChanged(auth, async user => {
 });
 
 // --- SALVAR ---
-formProduto.onsubmit = async (e) => {
+document.getElementById("formProduto").onsubmit = async (e) => {
   e.preventDefault();
 
   const user = auth.currentUser;
@@ -206,15 +206,7 @@ formProduto.onsubmit = async (e) => {
   const [yyyy, mm, dd] = validadeProduto.split("-");
   const validadeBR = `${dd}/${mm}/${yyyy}`;
 
-  let fotoURLFinal = previewFoto.src;
-
-  if (inputFoto.files.length > 0) {
-    const fotoRef = ref(storage, `${loja}/${produtoId || Date.now()}.jpg`);
-    await uploadBytes(fotoRef, inputFoto.files[0]);
-    fotoURLFinal = await getDownloadURL(fotoRef);
-  }
-
-  const id = produtoId || Date.now().toString();
+  // ... RESTANTE DO SEU CÓDIGO ...
 
   await setDoc(doc(db, `lojas/${loja}/produtos/${id}`), {
     nome: nomeProduto,
