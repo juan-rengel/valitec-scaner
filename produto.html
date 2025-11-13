@@ -131,16 +131,18 @@ btnCapturar.onclick = () => {
   previewFoto.src = dataURL;
   previewFoto.style.display = 'block';
 
-  fetch(dataURL).then(r => r.blob()).then(b => {
-    const dt = new DataTransfer();
-    dt.items.add(new File([b], "produto.jpg", { type: "image/jpeg" }));
-    inputFoto.files = dt.files;
+  // GUARDA A FOTO EM UMA VARIÁVEL GLOBAL
+  window.fotoBlob = null;
+
+  fetch(dataURL).then(r => r.blob()).then(blob => {
+    window.fotoBlob = blob;
   });
 
   if (stream) stream.getTracks().forEach(t => t.stop());
   cameraPreview.style.display = "none";
   btnCapturar.style.display = "none";
 };
+
 </script>
 
 <script type="module">
@@ -216,15 +218,24 @@ document.getElementById("formProduto").onsubmit = async (e) => {
   // ----------------------------
   let fotoURLFinal = "";
 
-  if (inputFoto.files.length > 0) {
+  // Se a foto veio da câmera
+if (window.fotoBlob) {
+    const fotoRef = ref(storage, `produtos/${loja}/${id}.jpg`);
+    await uploadBytes(fotoRef, window.fotoBlob);
+    fotoURLFinal = await getDownloadURL(fotoRef);
+}
+// Se o usuário escolheu um arquivo manualmente
+else if (inputFoto.files.length > 0) {
     const fotoRef = ref(storage, `produtos/${loja}/${id}.jpg`);
     await uploadBytes(fotoRef, inputFoto.files[0]);
     fotoURLFinal = await getDownloadURL(fotoRef);
-  } else if (produtoId) {
-    // Se estiver editando e não enviar foto nova, mantém foto antiga
+}
+// Se estiver editando e não trocar a foto
+else if (produtoId) {
     const snapProd = await getDoc(doc(db, `lojas/${loja}/produtos/${produtoId}`));
     fotoURLFinal = snapProd.data().fotoURL;
-  }
+}
+
 
   // ----------------------------
   //  SALVAR NO FIRESTORE
