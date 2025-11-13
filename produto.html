@@ -118,65 +118,64 @@
 <script src="https://unpkg.com/@zxing/browser@0.1.1"></script>
 
 <script>
-// camera capture script (non-module) — keeps UI immediate
+// CÂMERA – CORRIGIDA E 100% FUNCIONANDO
 let stream;
-const cameraPreview = document.getElementById('cameraPreview');
-const previewFoto = document.getElementById('previewFoto');
-const inputFoto = document.getElementById('foto');
-const btnOpenCamera = document.getElementById('btnOpenCamera');
-const btnCapturar = document.getElementById('btnCapturar');
-const scannerPreview = document.getElementById('scannerPreview');
+const cameraPreview = document.getElementById("cameraPreview");
+const previewFoto = document.getElementById("previewFoto");
+const inputFoto = document.getElementById("foto");
+const btnOpenCamera = document.getElementById("btnOpenCamera");
+const btnCapturar = document.getElementById("btnCapturar");
 
+// ABRIR CÂMERA
 btnOpenCamera.onclick = async () => {
   try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const cameras = devices.filter(d => d.kind === "videoinput");
-
-    if (cameras.length === 0) {
-      alert("Nenhuma câmera encontrada.");
-      return;
-    }
-
-    let cameraId = cameras.find(c => c.label.toLowerCase().includes("back"))?.deviceId;
-    if (!cameraId) cameraId = cameras[cameras.length - 1].deviceId;
-
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: cameraId } },
+      video: { facingMode: "environment" }, // CORREÇÃO PRINCIPAL
       audio: false
     });
 
     cameraPreview.srcObject = stream;
-    cameraPreview.style.display = 'block';
-    previewFoto.style.display = 'none';
-    btnCapturar.style.display = 'inline-block';
+
+    await cameraPreview.play(); // GARANTE videoWidth/videoHeight
+
+    cameraPreview.style.display = "block";
+    previewFoto.style.display = "none";
+    btnCapturar.style.display = "inline-block";
 
   } catch (e) {
-    alert("Não foi possível acessar a câmera.");
-    console.log(e);
+    alert("Erro ao acessar câmera.");
+    console.error(e);
   }
 };
 
-btnCapturar.onclick = () => {
-  const canvas = document.createElement('canvas');
-  canvas.width = cameraPreview.videoWidth || 640;
-  canvas.height = cameraPreview.videoHeight || 480;
-  canvas.getContext('2d').drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+// CAPTURAR FOTO
+btnCapturar.onclick = async () => {
+  const w = cameraPreview.videoWidth || 800;
+  const h = cameraPreview.videoHeight || 600;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(cameraPreview, 0, 0, w, h);
 
   const dataURL = canvas.toDataURL("image/jpeg");
+
   previewFoto.src = dataURL;
-  previewFoto.style.display = 'block';
+  previewFoto.style.display = "block";
 
-  // guarda Blob temporário para upload
-  window.fotoBlob = null;
-  fetch(dataURL).then(r => r.blob()).then(blob => {
-    window.fotoBlob = blob;
-  });
+  // Converter foto para Blob (upload)
+  const blob = await fetch(dataURL).then(r => r.blob());
+  window.fotoBlob = blob; // SALVA A FOTO CAPTURADA
 
+  // Fechar câmera após captura
   if (stream) stream.getTracks().forEach(t => t.stop());
   cameraPreview.style.display = "none";
   btnCapturar.style.display = "none";
 };
 </script>
+
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
